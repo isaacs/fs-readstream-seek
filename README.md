@@ -4,6 +4,9 @@ A
 [fs.ReadStream](https://nodejs.org/api/fs.html#fs_class_fs_readstream)
 that supports seeking to arbtrary locations within a file.
 
+[![Build
+Status](https://travis-ci.org/isaacs/fs-readstream-seek.svg?branch=master)](https://travis-ci.org/isaacs/fs-readstream-seek)
+
 ## USAGE
 
 ```js
