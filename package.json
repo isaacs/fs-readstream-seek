@@ -1,0 +1,11 @@
+{
+  "name": "fs-readstream-seek",
+  "version": "0.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "tap test/*.js --cov"
+  },
+  "repository": "https://github.com/isaacs/fs-readstream-seek",
+  "author": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)",
+  "license": "ISC"
+}
