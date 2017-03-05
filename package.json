@@ -10,5 +10,8 @@
   },
   "repository": "https://github.com/isaacs/fs-readstream-seek",
   "author": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "tap": "^10.3.0"
+  }
 }
