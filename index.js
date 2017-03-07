@@ -9,7 +9,6 @@ const OPENING = Symbol('opening')
 const CLOSING = Symbol('closing')
 
 const kMinPoolSpace = 128
-const kMaxLength = require('buffer').kMaxLength
 
 const allocNewPool = poolSize => {
   ReadStream[POOL] = Buffer.allocUnsafe(poolSize)
