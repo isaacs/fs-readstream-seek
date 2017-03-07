@@ -31,7 +31,7 @@ class ReadStream extends Readable {
 
     checkType(this.start, 'number', '"start" option must be a Number')
     checkType(this.end, 'number', '"end" option must be a Number')
-    assert(this.end > this.start, '"start" option must be <= "end"')
+    assert(this.start <= this.end, '"start" option must be <= "end"')
     this.filePos = this.readPos = this.start
     this[READING] = null
     this[OPENING] = false
@@ -107,8 +107,7 @@ class ReadStream extends Readable {
 
       // short-circuit EOF
 
-      const end = readingStart + bytesRead
-      const diff = readingStart - this.filePos
+      const diff = this.filePos - readingStart
 
       // if we hit EOF, and haven't seeked to somewhere else, then end
       if (bytesRead <= 0 && diff === 0)
@@ -123,8 +122,8 @@ class ReadStream extends Readable {
       if (diff < 0 || diff >= bytesRead)
         return this._read(n)
 
-      this.filePos += bytesRead - diff
-      this.push(thisPool.slice(start + diff, start + bytesRead - diff))
+      this.filePos += bytesRead + diff
+      this.push(thisPool.slice(start + diff, start + bytesRead + diff))
     }
 
     // the actual read.
@@ -157,8 +156,10 @@ class ReadStream extends Readable {
       } else {
         // can't get there from here
         bl.length = 0
-        if (!Array.isArray(bl))
-          bl.head = bl.tail = null
+
+        // this has no effect on node <7, but is required in >=7
+        bl.head = bl.tail = null
+
         this._readableState.length = 0
         this.filePos = pos
       }
@@ -193,7 +194,6 @@ class ReadStream extends Readable {
 
     fs.close(this.fd, er => {
       this[CLOSING] = false
-      /* istanbul ignore if */
       if (er)
         this.emit('error', er)
       else
