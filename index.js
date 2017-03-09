@@ -7,6 +7,8 @@ const POOL = Symbol('pool')
 const READING = Symbol('reading')
 const OPENING = Symbol('opening')
 const CLOSING = Symbol('closing')
+const FPOS = Symbol('filePos')
+const RPOS = Symbol('readPos')
 
 const kMinPoolSpace = 128
 
@@ -31,11 +33,19 @@ class ReadStream extends Readable {
     checkType(this.start, 'number', '"start" option must be a Number')
     checkType(this.end, 'number', '"end" option must be a Number')
     assert(this.start <= this.end, '"start" option must be <= "end"')
-    this.filePos = this.readPos = this.start
+    this[FPOS] = this[RPOS] = this.start
     this[READING] = null
     this[OPENING] = false
     this[CLOSING] = false
     this.read(0)
+  }
+
+  get readPos () {
+    return this[RPOS]
+  }
+
+  get filePos () {
+    return this[FPOS]
   }
 
   emit (ev, data) {
@@ -45,7 +55,7 @@ class ReadStream extends Readable {
     // update readPos on any data event.
     // Note that 'data' events are also emitted when read() returns data
     if (ev === 'data')
-      this.readPos += data.length
+      this[RPOS] += data.length
 
     return Readable.prototype.emit.apply(this, arguments)
   }
@@ -94,7 +104,7 @@ class ReadStream extends Readable {
     // in the thread pool another read() finishes up the pool, and
     // allocates a new one.
     const thisPool = ReadStream[POOL]
-    const toRead = Math.min(this.end - this.filePos + 1,
+    const toRead = Math.min(this.end - this[FPOS] + 1,
       Math.min(thisPool.length - thisPool.used, n))
     const start = thisPool.used
 
@@ -112,7 +122,7 @@ class ReadStream extends Readable {
 
       // short-circuit EOF
 
-      const diff = this.filePos - readingStart
+      const diff = this[FPOS] - readingStart
 
       // if we hit EOF, and haven't seeked to somewhere else, then end
       if (bytesRead <= 0 && diff === 0)
@@ -130,27 +140,27 @@ class ReadStream extends Readable {
     }
 
     // the actual read.
-    this[READING] = this.filePos
-    fs.read(this.fd, thisPool, thisPool.used, toRead, this.filePos, onread)
+    this[READING] = this[FPOS]
+    fs.read(this.fd, thisPool, thisPool.used, toRead, this[FPOS], onread)
 
     thisPool.used += toRead
   }
 
   push (buf) {
     if (buf)
-      this.filePos += buf.length
+      this[FPOS] += buf.length
     return Readable.prototype.push.apply(this, arguments)
   }
 
   seek (pos) {
     assert(pos >= this.start, 'cannot seek before "start" option')
     assert(pos <= this.end, 'cannot seek past "end" option')
-    if (pos === this.readPos)
+    if (pos === this[RPOS])
       return
 
     if (this._readableState.length) {
       const bl = this._readableState.buffer
-      const diff = pos - this.readPos
+      const diff = pos - this[RPOS]
       if (diff > 0 && this._readableState.length - diff > 128) {
         // i want to go to there
         const garbageChunk = Readable.prototype.read.call(this, diff)
@@ -164,15 +174,15 @@ class ReadStream extends Readable {
         bl.head = bl.tail = null
 
         this._readableState.length = 0
-        this.filePos = pos
+        this[FPOS] = pos
       }
     } else
       // just set our sights on where we want to be
-      this.filePos = pos
+      this[FPOS] = pos
 
     this._readableState.ended = false
     this._readableState.endEmitted = false
-    this.readPos = pos
+    this[RPOS] = pos
   }
 
   destroy () {
