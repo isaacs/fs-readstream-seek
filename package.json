@@ -16,5 +16,12 @@
   },
   "files": [
     "index.js"
+  ],
+  "keywords": [
+    "fs",
+    "readstream",
+    "fseek",
+    "seek",
+    "fs.seek"
   ]
 }
