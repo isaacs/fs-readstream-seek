@@ -153,6 +153,7 @@ class ReadStream extends Readable {
   }
 
   seek (pos) {
+    checkType(pos, 'number', 'position must be a number')
     assert(pos >= this.start, 'cannot seek before "start" option')
     assert(pos <= this.end, 'cannot seek past "end" option')
     if (pos === this[RPOS])
@@ -160,12 +161,14 @@ class ReadStream extends Readable {
 
     if (this._readableState.length) {
       const bl = this._readableState.buffer
-      const diff = pos - this[RPOS]
-      if (diff > 0 && this._readableState.length - diff > 128) {
-        // i want to go to there
-        const garbageChunk = Readable.prototype.read.call(this, diff)
-        assert(garbageChunk)
-        assert.equal(garbageChunk.length, diff)
+      // don't be the roommate who leaves 1g of milk in the fridge
+      if (pos > this[RPOS] && pos < this[FPOS] - 128) {
+        // throw away some of the buffer to jump the read pos ahead
+        // this is the quickest dirtiest version of Readable#read(),
+        // without any chance for user code to interfere.
+        const diff = pos - this[RPOS]
+        trimBufferList(bl, diff)
+        this._readableState.length -= diff
       } else {
         // can't get there from here
         bl.length = 0
@@ -230,5 +233,18 @@ const setOpt = (self, options, field, def) =>
 
 const optCheck = (options, field, def) =>
   options[field] === undefined ? def : options[field]
+
+const trimBufferList = (bl, diff) => {
+  while (bl.length) {
+    let b = bl.shift()
+    let n = b.length
+    if (n >= diff) {
+      b = b.slice(diff)
+      bl.unshift(b)
+      return
+    }
+    diff -= n
+  }
+}
 
 module.exports = ReadStream
