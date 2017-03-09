@@ -38,6 +38,9 @@ t.test('read straight through', async t => {
     accumStream(s),
     accumStream(f)
   ])
+  t.equal(s._readableState.length, 0, 'nothing left in read queue')
+  t.equal(s.filePos, 1024 * 26, 'read entire file')
+  t.equal(s.readPos, s.filePos, 'read up to file position')
   t.equal(sdata, fdata, 'got same data')
 })
 

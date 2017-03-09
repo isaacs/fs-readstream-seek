@@ -41,6 +41,12 @@ class ReadStream extends Readable {
   emit (ev, data) {
     if ((ev === 'end' || ev === 'error') && this.autoClose)
       this.close()
+
+    // update readPos on any data event.
+    // Note that 'data' events are also emitted when read() returns data
+    if (ev === 'data')
+      this.readPos += data.length
+
     return Readable.prototype.emit.apply(this, arguments)
   }
 
@@ -117,11 +123,9 @@ class ReadStream extends Readable {
       // 1. either we sought backwards, or past the end,
       // and need to restart, or
       // 2. or we sought within the read, do a partial push
-      // Note that if both diff and bytesRead are zero, then
       if (diff < 0 || diff >= bytesRead)
         return this._read(n)
 
-      this.filePos += bytesRead + diff
       this.push(thisPool.slice(start + diff, start + bytesRead + diff))
     }
 
@@ -132,11 +136,10 @@ class ReadStream extends Readable {
     thisPool.used += toRead
   }
 
-  read (n) {
-    var ret = Readable.prototype.read.apply(this, arguments)
-    if (ret)
-      this.readPos += ret.length
-    return ret
+  push (buf) {
+    if (buf)
+      this.filePos += buf.length
+    return Readable.prototype.push.apply(this, arguments)
   }
 
   seek (pos) {
@@ -147,11 +150,12 @@ class ReadStream extends Readable {
 
     if (this._readableState.length) {
       const bl = this._readableState.buffer
-      if (pos > this.readPos && pos < this.filePos - 128) {
+      const diff = pos - this.readPos
+      if (diff > 0 && this._readableState.length - diff > 128) {
         // i want to go to there
-        const diff = pos - this.readPos
-        trimBufferList(bl, diff)
-        this._readableState.length -= diff
+        const garbageChunk = Readable.prototype.read.call(this, diff)
+        assert(garbageChunk)
+        assert(garbageChunk.length === diff)
       } else {
         // can't get there from here
         bl.length = 0
@@ -166,7 +170,6 @@ class ReadStream extends Readable {
       // just set our sights on where we want to be
       this.filePos = pos
 
-    this._readableState.needReadable = true
     this._readableState.ended = false
     this._readableState.endEmitted = false
     this.readPos = pos
@@ -217,19 +220,5 @@ const setOpt = (self, options, field, def) =>
 
 const optCheck = (options, field, def) =>
   options[field] === undefined ? def : options[field]
-
-const trimBufferList = (bl, diff) => {
-  while (bl.length) {
-    let b = bl.shift()
-    let n = b.length
-    if (n >= diff) {
-      b = b.slice(diff)
-      bl.unshift(b)
-      return
-    }
-    diff -= n
-  }
-}
-
 
 module.exports = ReadStream
