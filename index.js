@@ -165,7 +165,7 @@ class ReadStream extends Readable {
         // i want to go to there
         const garbageChunk = Readable.prototype.read.call(this, diff)
         assert(garbageChunk)
-        assert(garbageChunk.length === diff)
+        assert.equal(garbageChunk.length, diff)
       } else {
         // can't get there from here
         bl.length = 0
