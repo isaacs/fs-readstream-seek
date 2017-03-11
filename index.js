@@ -57,7 +57,7 @@ class ReadStream extends Readable {
     if (ev === 'data')
       this[RPOS] += data.length
 
-    return Readable.prototype.emit.apply(this, arguments)
+    return super.emit.apply(this, arguments)
   }
 
   open (cb) {
@@ -149,7 +149,7 @@ class ReadStream extends Readable {
   push (buf) {
     if (buf)
       this[FPOS] += buf.length
-    return Readable.prototype.push.apply(this, arguments)
+    return super.push.apply(this, arguments)
   }
 
   seek (pos) {
